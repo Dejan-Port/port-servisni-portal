@@ -3,6 +3,7 @@
 Servisni portal za upravljanje radnim nalozima, klijentima i servisnom dokumentacijom.
 
 ---
+<img width="1920" height="1200" alt="main" src="https://github.com/user-attachments/assets/19456fb2-34e0-41e6-a50d-70e889d92a30" />
 
 ## Standalone verzija (Windows)
 
