@@ -33,7 +33,7 @@ Obavezno popuni podatke o firmi:
 
 ### Update
 
-Aplikacija automatski provjerava novu verziju pri svakom pokretanju. Kada je dostupna nova verzija, prikazuje se notifikacija u portalu.
+Aplikacija automatski proverava novu verziju pri svakom pokretanju. Kada je dostupna nova verzija, prikazuje se notifikacija u portalu.
 
 ### Deinstalacija
 
