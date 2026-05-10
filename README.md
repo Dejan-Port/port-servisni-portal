@@ -128,7 +128,7 @@ port-servisni-portal/
 git init
 git add server.py html\index.html html\changelog.html INSTALL.bat README.md .gitignore
 git commit -m "Port Servisni Portal v1.0.0"
-git remote add origin https://github.com/tvoj-nalog/port-servisni-portal.git
+git remote add origin https://github.com/Dejan-Port/port-servisni-portal.git
 git branch -M main
 git push -u origin main
 ```
@@ -186,13 +186,6 @@ Obavezno popuni podatke o firmi:
 3. Unesi: Naziv *, Mesto *, Email *, Mobilni telefon *
 4. Opciono: Napomena na reversu
 
-### SMTP podešavanja
-
-Ako koristiš lokalni SMTP (nije obavezno — prijava problema ide direktno na servisport.rs):
-
-```bat
-C:\PortServis\python\python.exe smtp_setup.py
-```
 
 ### Update
 
