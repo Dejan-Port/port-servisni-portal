@@ -190,6 +190,7 @@ class FirmaUpdate(BaseModel):
     naziv: Optional[str]=None; mesto: Optional[str]=None; adresa: Optional[str]=None
     pib: Optional[str]=None; mb: Optional[str]=None; email: Optional[str]=None
     web: Optional[str]=None; tel_fiksni: Optional[str]=None; tel_mobilni: Optional[str]=None
+    napomena_revers: Optional[str]=None
 
 class SmtpConfig(BaseModel):
     smtp_host: Optional[str]=None; smtp_port: int=587; smtp_user: Optional[str]=None
