@@ -198,11 +198,6 @@ C:\PortServis\python\python.exe smtp_setup.py
 
 Aplikacija automatski provjerava novu verziju pri svakom pokretanju. Kada je dostupna nova verzija, prikazuje se notifikacija u portalu.
 
-Ručni update:
-```bat
-C:\PortServis\python\python.exe -m pip install --upgrade ...
-```
-
 ### Deinstalacija
 
 ```bat
@@ -227,7 +222,7 @@ C:\PortServis\python\python.exe build_release.py
 4. Upload na server:
 
 ```bash
-scp C:\PortServis\releases\PortServis-latest.zip port@servisport.rs:/var/www/html/servisni/download/
+scp C:\PortServis\releases\PortServis-latest.zip XXXXX@servisport.rs:/var/www/html/servisni/download/
 ```
 
 5. Ažuriraj `version.json` na serveru:
@@ -282,7 +277,7 @@ https://servisport.rs/servisni/download/PortServis-latest.zip
 Ili kloniraj repozitorijum:
 
 ```bash
-git clone https://github.com/tvoj-nalog/port-servisni-portal.git
+git clone https://github.com/Dejan-Port/port-servisni-portal.git
 ```
 
 ## Struktura projekta
@@ -320,7 +315,7 @@ port-servisni-portal/
 git init
 git add server.py html\index.html html\changelog.html INSTALL.bat README.md .gitignore
 git commit -m "Port Servisni Portal v1.0.0"
-git remote add origin https://github.com/tvoj-nalog/port-servisni-portal.git
+git remote add origin https://github.com/Dejan-Port/port-servisni-portal.git
 git branch -M main
 git push -u origin main
 ```
@@ -346,7 +341,6 @@ plugins/
 - **Backend**: Python 3.11, FastAPI, Uvicorn
 - **Baza**: Firebird 3.0 (embedded za standalone)
 - **Frontend**: Vanilla JS, CSS custom properties
-- **Autentifikacija**: JWT + 2FA (TOTP) — server verzija
 - **Enkripcija**: Fernet (AES-128-CBC) — standalone SMTP
 - **Windows servis**: Task Scheduler
 
