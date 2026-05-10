@@ -20,6 +20,8 @@ Servisni portal za upravljanje radnim nalozima, klijentima i servisnom dokumenta
 
 Aplikacija se instalira u `C:\PortServis\` i automatski se pokreće sa Windowsom.
 
+Ukoliko se aplikacija ne pokrene proveriti status za Port Servisni Portal u Task Scheduler Queued ili Running, ukoliko je Queued pokrenuti ga i aplikacija ce se otvoriti u pretrazivacu, bug je primecen na nekim Win11 sistemima, bice update cim se resi.
+
 ### Nakon instalacije
 
 Obavezno popuni podatke o firmi:
