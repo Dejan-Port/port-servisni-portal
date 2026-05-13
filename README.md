@@ -12,14 +12,21 @@ Servisni portal za upravljanje radnim nalozima, klijentima i servisnom dokumenta
 - Administrator prava (za instalaciju)
 - Internet (samo pri prvoj instalaciji za Python pakete)
 
-### Instalacija
+### Instalacija za Windows
 
-1. Preuzmi `PortServis-latest.zip` sa `https://servisport.rs/servisni/download/`
-2. Raspakuj ZIP
+1. Preuzmi `PortServis-Windows-latest.zip` sa `https://servisport.rs/servisni/download/`
+2. Raspakuj ZIP 
 3. Desni klik na `INSTALL.bat` → **Pokreni kao administrator**
 4. Prati uputstvo na ekranu
 
-Aplikacija se instalira u `C:\PortServis\` i automatski se pokreće sa Windowsom.
+### Instalacija za Windows
+
+1. Preuzmi `PortServis-Linux-latest.zip` sa `https://servisport.rs/servisni/download/`
+2. Raspakuj ZIP `unzip PortServis-Linux-latest.zip`
+3. Pokreni instalaciju `sudo bash install.sh`
+4. Prati uputstvo na ekranu
+
+Aplikacija se instalira u `C:\PortServis\` za Windows `/opt/portservis/` za Linux  i automatski se pokreće sa Windows-om i Linux-om.
 
 Ukoliko se aplikacija ne pokrene proveriti status za Port Servisni Portal u Task Scheduler Queued ili Running, ukoliko je Queued pokrenuti ga i aplikacija ce se otvoriti u pretrazivacu, bug je primecen na nekim Win11 sistemima, bice update cim se resi.
 
