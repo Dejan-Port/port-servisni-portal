@@ -5,7 +5,7 @@ Servisni portal za upravljanje radnim nalozima, klijentima i servisnom dokumenta
 ---
 <img width="1920" height="1200" alt="main" src="https://github.com/user-attachments/assets/19456fb2-34e0-41e6-a50d-70e889d92a30" />
 
-## Standalone verzija (Windows)
+## Standalone verzija (Windows)(Linux)
 
 ### Zahtevi
 - Windows 10 64-bit
@@ -19,7 +19,7 @@ Servisni portal za upravljanje radnim nalozima, klijentima i servisnom dokumenta
 3. Desni klik na `INSTALL.bat` → **Pokreni kao administrator**
 4. Prati uputstvo na ekranu
 
-### Instalacija za Windows
+### Instalacija za Linux
 
 1. Preuzmi `PortServis-Linux-latest.zip` sa `https://servisport.rs/servisni/download/`
 2. Raspakuj ZIP `unzip PortServis-Linux-latest.zip`
