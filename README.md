@@ -5,11 +5,12 @@ Servisni portal za upravljanje radnim nalozima, klijentima i servisnom dokumenta
 ---
 <img width="1920" height="1200" alt="main" src="https://github.com/user-attachments/assets/19456fb2-34e0-41e6-a50d-70e889d92a30" />
 
-## Standalone verzija (Windows)(Linux)
+## Standalone verzija Windows i Linux
 
 ### Zahtevi
 - Windows 10 64-bit
-- Administrator prava (za instalaciju)
+- Linux 64-bit
+- Administrator / Sudo prava (za instalaciju)
 - Internet (samo pri prvoj instalaciji za Python pakete)
 
 ### Instalacija za Windows
@@ -42,11 +43,20 @@ Obavezno popuni podatke o firmi:
 
 Aplikacija automatski proverava novu verziju pri svakom pokretanju. Kada je dostupna nova verzija, prikazuje se notifikacija u portalu.
 
-### Deinstalacija
+### Deinstalacija Windows 
 
 ```bat
 schtasks /delete /tn "PortServisniPortal" /f
 rmdir /s /q C:\PortServis
+```
+###Deinstalacija Linux 
+
+```Terminal
+sudo systemctl stop portservis
+sudo systemctl disable portservis
+sudo rm /etc/systemd/system/portservis.service
+sudo systemctl daemon-reload
+sudo rm -rf /opt/portservis
 ```
 
 ---
