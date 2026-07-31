@@ -165,6 +165,24 @@ nav{flex:1;padding:16px 12px;overflow-y:auto;display:flex;flex-direction:column;
 </style>
 </head>
 <body>
+<div id="login-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);align-items:center;justify-content:center">
+  <form id="login-form" onsubmit="return doLogin(event)" style="width:100%;max-width:320px;padding:32px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
+    <div style="text-align:center;margin-bottom:22px">
+      <div style="font-size:20px;font-weight:700;color:var(--text)"><span style="color:var(--accent)">Port</span> Servisni Portal</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:2px">Prijava</div>
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label class="flabel">Korisničko ime</label>
+      <input class="finput" id="login-uname" autocomplete="username" required>
+    </div>
+    <div class="fg" style="margin-bottom:8px">
+      <label class="flabel">Lozinka</label>
+      <input class="finput" id="login-pass" type="password" autocomplete="current-password" required>
+    </div>
+    <div id="login-error" style="color:#dc2626;font-size:12px;min-height:16px;margin-bottom:10px"></div>
+    <button class="btn btn-primary" type="submit" style="width:100%">Prijavi se</button>
+  </form>
+</div>
 <div class="shell">
   <aside class="sidebar">
     <div class="logo-wrap">
@@ -326,8 +344,8 @@ nav{flex:1;padding:16px 12px;overflow-y:auto;display:flex;flex-direction:column;
         <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px">
           <div class="pod-tab active" id="ptab-firma" onclick="switchTab('firma',this)" style="padding:10px 20px;font-size:12px;font-weight:600;cursor:pointer;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-1px">🏢 Podaci firme</div>
           <div class="pod-tab" id="ptab-prikaz" onclick="switchTab('prikaz',this)" style="padding:10px 20px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);margin-bottom:-1px">🔡 Prikaz</div>
-          
-          
+          <div class="pod-tab" id="ptab-korisnici" onclick="switchTab('korisnici',this)" style="padding:10px 20px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);margin-bottom:-1px">👤 Korisnici</div>
+          <div class="pod-tab" id="ptab-smtp" onclick="switchTab('smtp',this)" style="padding:10px 20px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);margin-bottom:-1px">📧 Email</div>
         </div>
 
         <!-- Firma tab -->
@@ -421,6 +439,30 @@ nav{flex:1;padding:16px 12px;overflow-y:auto;display:flex;flex-direction:column;
             </div>
           </div>
         </div>
+        <!-- Korisnici tab -->
+        <div id="tab-korisnici" style="display:none">
+          <div class="panel" style="max-width:640px">
+            <div class="panel-head"><div class="panel-title">👤 Korisnici</div></div>
+            <div class="modal-body">
+              <div id="korisnici-lista" style="display:grid;gap:6px;margin-bottom:16px"></div>
+              <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:6px">
+                <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px">Dodaj novog korisnika</div>
+                <div class="fg-grid">
+                  <div class="fg"><label class="flabel">Korisničko ime *</label><input class="finput" id="kor-uname" placeholder="pera"></div>
+                  <div class="fg"><label class="flabel">Lozinka *</label><input class="finput" id="kor-pass" type="password" placeholder="min. 4 karaktera"></div>
+                  <div class="fg full"><label class="flabel">Ime i prezime *</label><input class="finput" id="kor-naziv" placeholder="Petar Petrović"></div>
+                  <div class="fg full"><label class="flabel">Uloga</label>
+                    <select class="finput" id="kor-vrsta"><option value="0">Operater</option><option value="1">Admin</option></select>
+                  </div>
+                </div>
+                <div style="margin-top:12px;display:flex;justify-content:flex-end">
+                  <button class="btn btn-primary" onclick="dodajKorisnika()">➕ Dodaj korisnika</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- SMTP tab -->
         <div id="tab-smtp" style="display:none">
           <div class="panel" style="max-width:600px">
@@ -443,6 +485,26 @@ nav{flex:1;padding:16px 12px;overflow-y:auto;display:flex;flex-direction:column;
               </div>
               <div style="margin-top:20px;display:flex;justify-content:flex-end">
                 <button class="btn btn-primary" onclick="saveSmtp()">💾 Sačuvaj SMTP</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" style="max-width:600px;margin-top:20px">
+            <div class="panel-head"><div class="panel-title">📬 Email obaveštenje klijentu po realizaciji</div></div>
+            <div class="modal-body">
+              <div class="fg full" style="flex-direction:row;align-items:center;gap:8px;margin-bottom:14px">
+                <input type="checkbox" id="notif-enabled" style="accent-color:var(--accent)">
+                <label class="flabel" for="notif-enabled" style="cursor:pointer;text-transform:none">Automatski pošalji email klijentu kad se nalog realizuje (koristi SMTP podešavanja iznad)</label>
+              </div>
+              <div class="fg-grid">
+                <div class="fg full"><label class="flabel">Naslov emaila</label><input class="finput" id="notif-subject" placeholder="Vaš uređaj je spreman za preuzimanje"></div>
+                <div class="fg full"><label class="flabel">Tekst emaila</label>
+                  <textarea class="ftextarea" id="notif-body" style="min-height:120px" placeholder="Poštovani,&#10;&#10;Vaš uređaj {uredjaj} je završen...&#10;&#10;Broj naloga: {broj}"></textarea>
+                </div>
+                <div class="fg full" style="font-size:11px;color:var(--text2)">Dostupne oznake: <code>{broj}</code> (broj naloga), <code>{uredjaj}</code>, <code>{klijent}</code> — zamenjuju se stvarnim podacima pri slanju. Email se šalje SAMO ako klijent ima unetu email adresu.</div>
+              </div>
+              <div style="margin-top:16px;display:flex;justify-content:flex-end">
+                <button class="btn btn-primary" onclick="saveEmailNotif()">💾 Sačuvaj obaveštenje</button>
               </div>
             </div>
           </div>
@@ -769,8 +831,8 @@ nav{flex:1;padding:16px 12px;overflow-y:auto;display:flex;flex-direction:column;
 'use strict';
 
 const API = window.location.origin;
-let _token   = 'standalone';
-let _user    = {id:1, uname:'admin', naziv:'Administrator', vrsta:1};
+let _token   = null;
+let _user    = null;
 let _klijenti = [];
 let _rnFilter = 'aktivan';
 let _klFilter = 'svi';
@@ -779,18 +841,64 @@ let _currentRnBroj = null;
 /* ── INIT ────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async function() {
   loadFontSize();
+  var savedToken = localStorage.getItem('port_token');
+  var savedUser  = localStorage.getItem('port_user');
+  if (savedToken && savedUser) {
+    try {
+      _token = savedToken;
+      _user  = JSON.parse(savedUser);
+      initApp();
+      return;
+    } catch(e) { /* nastavi na login ekran */ }
+  }
+  showLoginScreen();
+});
+
+function showLoginScreen() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.querySelector('.shell').style.display = 'none';
+  setTimeout(function() { document.getElementById('login-uname').focus(); }, 50);
+}
+
+async function doLogin(ev) {
+  ev.preventDefault();
+  var uname = document.getElementById('login-uname').value.trim();
+  var pass  = document.getElementById('login-pass').value;
+  var errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  if (!uname || !pass) return false;
+  try {
+    var r = await fetch(API + '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uname: uname, password: pass })
+    });
+    var body = await r.json().catch(function(){return {};});
+    if (!r.ok) { errEl.textContent = body.detail || 'Greška pri prijavi'; return false; }
+    _token = body.token;
+    _user  = body.user;
+    localStorage.setItem('port_token', _token);
+    localStorage.setItem('port_user', JSON.stringify(_user));
+    document.getElementById('login-screen').style.display = 'none';
+    document.querySelector('.shell').style.display = '';
+    initApp();
+  } catch(e) { errEl.textContent = 'Server nije dostupan'; }
+  return false;
+}
+
+function initApp() {
   // Prikazi sacuvanu verziju odmah
   var savedVer = localStorage.getItem('app_version');
   if (savedVer) { var vel0 = document.getElementById('app-version'); if (vel0) vel0.textContent = 'Standalone v' + savedVer; }
-  // Standalone - bez autentifikacije
-  if (_user.naziv) {
+  if (_user && _user.naziv) {
     document.getElementById('user-name').textContent = _user.naziv;
     document.getElementById('user-role').textContent = _user.vrsta === 1 ? 'Administrator' : 'Tehničar';
     const initials = _user.naziv.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
     document.getElementById('user-avatar').textContent = initials || 'U';
-    // Prikaži operateri tab samo adminu
-    if (_user.vrsta === 1) {
-      
+    // Korisnici/SMTP tabovi (admin-only na backend-u) — sakrij vizuelno za operatera
+    if (_user.vrsta !== 1) {
+      var tk = document.getElementById('ptab-korisnici'); if (tk) tk.style.display = 'none';
+      var ts = document.getElementById('ptab-smtp'); if (ts) ts.style.display = 'none';
     }
   }
   applyTheme(getTheme());
@@ -806,7 +914,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   setTimeout(checkUpdate, 3000);
   setTimeout(checkNews, 4000);
   setInterval(checkUpdate, 300000);
-});
+}
 
 /* ── TEMA ────────────────────────────────────────────────── */
 function getTheme() { return localStorage.getItem('port_theme') || 'dark'; }
@@ -1638,7 +1746,7 @@ function switchTab(tab, el) {
     var fEl = document.getElementById('font-size-val');
     if (fEl) fEl.textContent = current + '%';
   }
-  ['firma','prikaz'].forEach(function(t) {
+  ['firma','prikaz','twofa','korisnici','smtp'].forEach(function(t) {
     var el2 = document.getElementById('tab-'+t);
     if (el2) el2.style.display = 'none';
   });
@@ -1651,8 +1759,108 @@ function switchTab(tab, el) {
   el.style.color = 'var(--accent)';
   el.style.borderBottom = '2px solid var(--accent)';
   if (tab === 'firma')     loadFirmaPodesavanja();
+  if (tab === 'korisnici') loadKorisniciList();
+  if (tab === 'smtp')    { loadSmtp(); loadEmailNotif(); }
+}
 
-  
+/* ── Korisnici (Podešavanja) ────────────────────────────── */
+async function loadKorisniciList() {
+  var wrap = document.getElementById('korisnici-lista');
+  wrap.innerHTML = '<div class="loader">Učitavam...</div>';
+  try {
+    var lista = await api('/admin/korisnici');
+    if (!lista.length) { wrap.innerHTML = '<div style="color:var(--text2);font-size:12px">Nema korisnika.</div>'; return; }
+    wrap.innerHTML = lista.map(function(k) {
+      var neaktivan = !k.aktivan;
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px' + (neaktivan ? ';opacity:.55' : '') + '">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:13px;font-weight:600">' + k.naziv + (neaktivan ? ' <span style="font-weight:400;color:var(--text2)">(neaktivan)</span>' : '') + '</div>' +
+          '<div style="font-size:11px;color:var(--text2)">' + k.uname + ' · ' + (k.vrsta == 1 ? 'Admin' : 'Operater') + '</div>' +
+        '</div>' +
+        '<button class="btn btn-ghost btn-sm" onclick="editKorisnik(' + k.sifra + ',\'' + k.naziv.replace(/'/g,"\\'") + '\',' + k.vrsta + ')">✏️</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="resetKorisnikLozinka(' + k.sifra + ')">🔑</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="toggleKorisnikAktivan(' + k.sifra + ',' + (neaktivan?1:0) + ')">' + (neaktivan ? '✅' : '🚫') + '</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="obrisiKorisnika(' + k.sifra + ',\'' + k.naziv.replace(/'/g,"\\'") + '\')" style="color:#dc2626">🗑️</button>' +
+      '</div>';
+    }).join('');
+  } catch(e) { wrap.innerHTML = '<div style="color:#dc2626;font-size:12px">Greška: ' + e.message + '</div>'; }
+}
+
+async function dodajKorisnika() {
+  var uname = document.getElementById('kor-uname').value.trim();
+  var pass  = document.getElementById('kor-pass').value;
+  var naziv = document.getElementById('kor-naziv').value.trim();
+  var vrsta = parseInt(document.getElementById('kor-vrsta').value);
+  if (!uname || !naziv) { showToast('Korisničko ime i naziv su obavezni!', 'warn'); return; }
+  if (!pass || pass.length < 4) { showToast('Lozinka mora imati bar 4 karaktera!', 'warn'); return; }
+  try {
+    await api('/admin/korisnici', { method: 'POST', body: JSON.stringify({ uname: uname, password: pass, naziv: naziv, vrsta: vrsta }) });
+    document.getElementById('kor-uname').value = '';
+    document.getElementById('kor-pass').value = '';
+    document.getElementById('kor-naziv').value = '';
+    showToast('Korisnik dodat ✓');
+    loadKorisniciList();
+  } catch(e) { showToast('Greška: ' + e.message, 'error'); }
+}
+
+async function editKorisnik(sifra, trenutniNaziv, trenutnaVrsta) {
+  var noviNaziv = prompt('Ime i prezime:', trenutniNaziv);
+  if (noviNaziv === null) return;
+  noviNaziv = noviNaziv.trim();
+  if (!noviNaziv) { showToast('Naziv ne sme biti prazan!', 'warn'); return; }
+  var novaVrsta = confirm('Da li je ovaj korisnik ADMIN? (OK = Admin, Otkaži = Operater)') ? 1 : 0;
+  try {
+    await api('/admin/korisnici/' + sifra, { method: 'PUT', body: JSON.stringify({ naziv: noviNaziv, vrsta: novaVrsta }) });
+    showToast('Korisnik izmenjen ✓');
+    loadKorisniciList();
+  } catch(e) { showToast('Greška: ' + e.message, 'error'); }
+}
+
+async function resetKorisnikLozinka(sifra) {
+  var nova = prompt('Nova lozinka (min. 4 karaktera):');
+  if (!nova) return;
+  if (nova.length < 4) { showToast('Min. 4 karaktera!', 'warn'); return; }
+  try {
+    await api('/admin/korisnici/' + sifra + '/lozinka?nova_lozinka=' + encodeURIComponent(nova), { method: 'PUT' });
+    showToast('Lozinka resetovana ✓');
+  } catch(e) { showToast('Greška: ' + e.message, 'error'); }
+}
+
+async function toggleKorisnikAktivan(sifra, aktivan) {
+  try {
+    await api('/admin/korisnici/' + sifra + '/status?aktivan=' + aktivan, { method: 'PUT' });
+    loadKorisniciList();
+  } catch(e) { showToast('Greška: ' + e.message, 'error'); }
+}
+
+async function obrisiKorisnika(sifra, naziv) {
+  if (!confirm('Obrisati korisnika "' + naziv + '"? Ova akcija se ne može poništiti.')) return;
+  try {
+    await api('/admin/korisnici/' + sifra, { method: 'DELETE' });
+    showToast('Korisnik obrisan ✓');
+    loadKorisniciList();
+  } catch(e) { showToast('Greška: ' + e.message, 'error'); }
+}
+
+/* ── Email obaveštenje po realizaciji ──────────────────── */
+async function loadEmailNotif() {
+  try {
+    var n = await api('/podesavanja/email-notif');
+    document.getElementById('notif-enabled').checked = !!n.enabled;
+    document.getElementById('notif-subject').value = n.subject || '';
+    document.getElementById('notif-body').value = n.body || '';
+  } catch(e) { showToast('Greška pri učitavanju: ' + e.message, 'error'); }
+}
+
+async function saveEmailNotif() {
+  try {
+    await api('/podesavanja/email-notif', { method: 'PUT', body: JSON.stringify({
+      enabled: document.getElementById('notif-enabled').checked ? 1 : 0,
+      subject: document.getElementById('notif-subject').value || null,
+      body: document.getElementById('notif-body').value || null,
+    })});
+    showToast('Sačuvano ✓');
+  } catch(e) { showToast('Greška: ' + e.message, 'error'); }
 }
 
 async function loadFirmaPodesavanja() {

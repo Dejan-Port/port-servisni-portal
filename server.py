@@ -49,7 +49,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 
-VERSION    = "1.0.2"
+VERSION    = "1.0.0"
 _sdir      = os.path.dirname(os.path.abspath(__file__))
 DB_PATH    = os.environ.get("DB_PATH",    os.path.join(_sdir, "db", "servis.gdb"))
 DB_USER    = "SYSDBA"
@@ -183,11 +183,89 @@ def ensure_db():
         except Exception as e:
             print(f"  Greška: {e}")
 
-def get_current_user(token: Optional[str]=None,
-                     credentials: HTTPAuthorizationCredentials=Depends(security)) -> dict:
-    return {"id": 1, "uname": "admin", "vrsta": 1}
+# Kolone dodate NAKON prvih instalacija — postojeće baze (već isporučene korisnicima)
+# nemaju ih, pa se dodaju ovde idempotentno (ALTER TABLE, ignoriši grešku ako već postoji).
+# Isti princip kao feedback_baza_update memorija — Python+fdb, ne ručni isql-fb.
+def run_migrations():
+    kolone = [
+        ("EMAIL_NOTIF_ENABLED", "INTEGER DEFAULT 0"),
+        ("EMAIL_NOTIF_SUBJECT", "VARCHAR(200)"),
+        ("EMAIL_NOTIF_BODY", "BLOB SUB_TYPE TEXT"),
+    ]
+    try:
+        with get_db_ctx() as con:
+            cur = con.cursor()
+            for kolona, tip in kolone:
+                try:
+                    cur.execute(f"ALTER TABLE FIRMA ADD {kolona} {tip}")
+                    con.commit()
+                    print(f"  Migracija: dodata kolona FIRMA.{kolona}")
+                except Exception:
+                    con.rollback()  # kolona već postoji — u redu je
+    except Exception as e:
+        print(f"  Migracija preskočena (baza još ne postoji?): {e}")
 
-def require_admin(user=Depends(get_current_user)): return user
+# Prvi start (ili baza bez ijednog korisnika) — bez ovoga se niko ne bi mogao
+# ulogovati posle uvođenja pravog login-a (ranije je autentifikacija bila
+# potpuno zaobiđena, hardkodovan admin). Lozinka se ispisuje SAMO jednom, u
+# konzoli — korisnik je treba promeniti pri prvoj prijavi.
+def ensure_default_user():
+    try:
+        with get_db_ctx() as con:
+            cur = con.cursor()
+            cur.execute("SELECT COUNT(*) FROM KORISNICI")
+            if cur.fetchone()[0] > 0:
+                return
+            pass_hash = hashlib.sha256("admin".encode()).hexdigest()
+            cur.execute("INSERT INTO KORISNICI (UNAME,PASS,NAZIV,VRSTA,AKTIVAN) VALUES (?,?,?,1,1)",
+                        ["admin", pass_hash, "Administrator"])
+            con.commit()
+            print("="*55)
+            print("  Prvi start — kreiran podrazumevani nalog:")
+            print("  Korisničko ime: admin")
+            print("  Lozinka:        admin")
+            print("  ⚠ Promenite lozinku odmah posle prijave!")
+            print("="*55)
+    except Exception as e:
+        print(f"  ensure_default_user preskočeno: {e}")
+
+def _jwt_secret() -> str:
+    # Isti mašinski ključ koji se već koristi za enkripciju SMTP polja (_machine_key) —
+    # jedinstven po instalaciji, ne zahteva dodatnu konfiguraciju.
+    return _machine_key().decode()
+
+def _make_token(sifra: int, uname: str, vrsta: int) -> str:
+    exp = (datetime.utcnow() + timedelta(hours=12)).isoformat()
+    payload = f"{sifra}:{uname}:{exp}:{_jwt_secret()}"
+    sig = hashlib.sha256(payload.encode()).hexdigest()
+    data = {"id": sifra, "u": uname, "vrsta": vrsta, "exp": exp, "sig": sig}
+    return base64.b64encode(json.dumps(data).encode()).decode()
+
+def get_current_user(credentials: HTTPAuthorizationCredentials=Depends(security)) -> dict:
+    if not credentials:
+        raise HTTPException(401, "Prijava je obavezna")
+    try:
+        data = json.loads(base64.b64decode(credentials.credentials.encode()).decode())
+        sifra=data["id"]; uname=data["u"]; vrsta=data.get("vrsta",0); exp=data["exp"]; sig=data["sig"]
+        payload = f"{sifra}:{uname}:{exp}:{_jwt_secret()}"
+        if hashlib.sha256(payload.encode()).hexdigest() != sig:
+            raise ValueError("Nevažeći potpis")
+        if datetime.fromisoformat(exp) < datetime.utcnow():
+            raise ValueError("Token istekao")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(401, "Nevažeći ili istekao token")
+    return {"id": sifra, "uname": uname, "vrsta": vrsta}
+
+def require_admin(user=Depends(get_current_user)) -> dict:
+    if user.get("vrsta") != 1:
+        raise HTTPException(403, "Samo administrator ima pristup")
+    return user
+
+class LoginRequest(BaseModel):
+    uname: str
+    password: str
 
 class KlijentCreate(BaseModel):
     naziv: str = ""; ime: Optional[str]=None; prezime: Optional[str]=None
@@ -227,6 +305,14 @@ class LozinkaChange(BaseModel):
 class KorisnikCreate(BaseModel):
     uname: str; password: str; naziv: str; vrsta: int=0
 
+class KorisnikUpdate(BaseModel):
+    naziv: str; vrsta: int=0
+
+class EmailNotifConfig(BaseModel):
+    enabled: int=0
+    subject: Optional[str]=None
+    body: Optional[str]=None
+
 
 @app.get("/changelog", include_in_schema=False)
 def changelog():
@@ -255,8 +341,22 @@ def version_txt():
     from fastapi.responses import PlainTextResponse
     return PlainTextResponse(VERSION)
 
-@app.get("/auto-token", include_in_schema=False)
-def auto_token(): return {"token": "standalone", "uname": "admin", "vrsta": 1}
+@app.post("/login", tags=["Auth"])
+def login(data: LoginRequest):
+    pass_hash = hashlib.sha256(data.password.encode()).hexdigest()
+    with get_db_ctx() as con:
+        cur = con.cursor()
+        cur.execute("SELECT SIFRA,UNAME,NAZIV,VRSTA,AKTIVAN FROM KORISNICI WHERE UNAME=? AND PASS=?", [data.uname, pass_hash])
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(401, "Pogrešno korisničko ime ili lozinka")
+        sifra, uname, naziv, vrsta, aktivan = row
+        if not aktivan:
+            raise HTTPException(403, "Korisnički nalog je deaktiviran")
+    return {
+        "token": _make_token(sifra, uname, vrsta),
+        "user": {"id": sifra, "uname": uname, "naziv": naziv, "vrsta": vrsta},
+    }
 
 @app.get("/firma", tags=["Firma"])
 def get_firma(user=Depends(get_current_user)):
@@ -444,6 +544,27 @@ def realizuj_nalog(broj: int, data: RealizacijaData, user=Depends(get_current_us
         cur.execute("UPDATE RADNI_NALOZI SET IZVRSENI_RADOVI=?,CENA=?,DATUM_REALIZACIJE=CURRENT_DATE WHERE BROJ=?",[data.izvrseni_radovi,data.cena,broj])
         if cur.rowcount==0: raise HTTPException(404,"Nalog nije pronađen")
         con.commit()
+
+        # Email obaveštenje klijentu — nikad ne obaraj realizaciju ako slanje ne uspe.
+        try:
+            cur.execute("SELECT n.UREDJAJ,k.NAZIV,k.EMAIL FROM RADNI_NALOZI n LEFT JOIN KLIJENTI k ON n.KLIJENT=k.SIFRA WHERE n.BROJ=?",[broj])
+            nr = cur.fetchone()
+            cur.execute("SELECT EMAIL_NOTIF_ENABLED,EMAIL_NOTIF_SUBJECT,EMAIL_NOTIF_BODY FROM FIRMA WHERE SIFRA=1")
+            fr = cur.fetchone()
+            if nr and nr[2] and fr and fr[0]:
+                uredjaj, klijent_naziv, klijent_email = nr
+                telo = fr[2]
+                if telo is not None and hasattr(telo,"read"): telo = telo.read()
+                if isinstance(telo,(bytes,bytearray)): telo = telo.decode("utf-8","ignore")
+                subj = fr[1] or "Vaš uređaj je spreman za preuzimanje"
+                telo = telo or "Poštovani,\n\nVaš uređaj {uredjaj} je završen i spreman za preuzimanje.\n\nBroj naloga: {broj}\n\nSrdačan pozdrav."
+                zamene = {"{broj}": str(broj), "{uredjaj}": uredjaj or "", "{klijent}": klijent_naziv or ""}
+                for k,v in zamene.items():
+                    subj = subj.replace(k,v); telo = telo.replace(k,v)
+                _send_mail(subj, telo, to_override=klijent_email)
+        except Exception as e:
+            logging.warning(f"Email obaveštenje (realizacija naloga {broj}) nije poslato: {e}")
+
     return {"status":"realized"}
 
 @app.get("/nalozi/{broj}/log", tags=["Nalozi"])
@@ -545,7 +666,7 @@ body{{font-family:'Inter',sans-serif;font-size:10px;color:#000;background:#fff;}
 <div class="page">
 <div class="copy-tag">Kopija — za servis</div>
 <div class="header"><div><div class="firma-naziv">{f_naziv}</div><div class="firma-info">PIB: {f_pib} | MB: {f_mb}</div></div>
-<div class="doc-info"><div class="doc-title">RADNI NALOG</div><div style="font-size:8px;color:#888;font-weight:400;letter-spacing:1px">Revers</div><div class="doc-br">{rn_prefix}-{br:04d}</div><div class="doc-datum">Datum: {datum_str}</div>{f'<div style="color:#dc2626;font-weight:700;font-size:9px">⚠ REKLAMACIJA &nbsp;{("· " + datum_reklamacije) if datum_reklamacije else ""}</div>' if reklamacija else ''}
+<div class="doc-info"><div class="doc-title">REVERS</div><div class="doc-br">{rn_prefix}-{br:04d}</div><div class="doc-datum">Datum: {datum_str}</div>{f'<div style="color:#dc2626;font-weight:700;font-size:9px">⚠ REKLAMACIJA &nbsp;{("· " + datum_reklamacije) if datum_reklamacije else ""}</div>' if reklamacija else ''}
 <div class="doc-datum"><span class="gar-badge {'ne' if not garancija else ''}">{'U garanciji' if garancija else 'Van garancije'}</span></div></div></div>
 <div class="section"><div class="section-title">Klijent</div><div class="info-grid"><div class="info-item full"><div class="info-label">Naziv / Ime</div><div class="info-val">{safe(k_naziv)} &nbsp;<span style="font-weight:400;color:#555;font-size:10px">{k_tel_str}</span></div></div></div></div>
 <div class="section"><div class="section-title">Uređaj</div><div class="info-grid">
@@ -558,7 +679,7 @@ body{{font-family:'Inter',sans-serif;font-size:10px;color:#000;background:#fff;}
 <div class="check-item"><div class="check-box {'checked' if ostalo else ''}">{'✓' if ostalo else ''}</div> Ostalo</div></div></div>
 <div class="section"><div class="section-title">Opis kvara</div><div class="kvar-box"><div class="kvar-text">{opis_str}</div></div></div>
 {f'<div class="section"><div class="section-title">Izvršeni radovi</div><div class="kvar-box"><div class="kvar-text">{safe(izvrseni_radovi)}</div></div></div>' if izvrseni_radovi else ''}
-{log_html_garancija}
+<div class="napomena">⚠ <strong>Napomena:</strong> {f_napomena}</div>
 <div class="potpisi"><div><div class="potpis-linija"></div><div class="potpis-label">Predao klijent</div></div><div><div class="potpis-linija"></div><div class="potpis-label">Primio serviser</div></div></div>
 <div class="footer"><span>Kopija — za servis</span><span>Štampano: {datetime.now().strftime('%d.%m.%Y %H:%M')}</span></div>
 <hr class="divider">
@@ -572,6 +693,8 @@ body{{font-family:'Inter',sans-serif;font-size:10px;color:#000;background:#fff;}
 <div class="info-item full"><div class="info-label">Uređaj</div><div class="info-val">{safe(uredjaj)}</div></div>
 <div class="info-item"><div class="info-label">Serijski broj</div><div class="info-val" style="font-family:monospace">{safe(serbr)}</div></div>
 <div class="info-item"><div class="info-label">Cena servisa</div><div class="info-val">{cena_str}</div></div></div>
+{f'<div class="section" style="margin-bottom:5px"><div class="section-title">Izvršeni radovi</div><div class="kvar-box"><div class="kvar-text">{safe(izvrseni_radovi)}</div></div></div>' if izvrseni_radovi else ''}
+{log_html_garancija}
 <div class="napomena">⚠ <strong>Napomena:</strong> {f_napomena}</div>
 <div class="potpisi"><div><div class="potpis-linija"></div><div class="potpis-label">Predao klijent</div></div><div><div class="potpis-linija"></div><div class="potpis-label">Primio serviser</div></div></div>
 <div class="footer"><span>Original — za klijenta</span><span>{f_naziv}</span><span>Štampano: {datetime.now().strftime('%d.%m.%Y %H:%M')}</span></div>
@@ -624,7 +747,7 @@ def test_smtp(user=Depends(require_admin)):
     _send_mail("Test mail — Port Servisni Portal",f"Test uspešno poslat!\n{datetime.now().strftime('%d.%m.%Y %H:%M')}")
     return {"status":"sent"}
 
-def _send_mail(subject: str, body: str, attachments: list = None):
+def _send_mail(subject: str, body: str, attachments: list = None, to_override: str = None):
     import smtplib
     from email.mime.text import MIMEText
     from email.mime.multipart import MIMEMultipart
@@ -635,12 +758,14 @@ def _send_mail(subject: str, body: str, attachments: list = None):
         cur=con.cursor()
         cur.execute("SELECT SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASS,SMTP_FROM,SMTP_TO,SMTP_SSL FROM FIRMA WHERE SIFRA=1")
         row=cur.fetchone()
-    if not row or not row[0] or not row[5]: raise HTTPException(400,"SMTP nije podešen")
+    if not row or not row[0]: raise HTTPException(400,"SMTP nije podešen")
     host=decrypt_str(row[0]); port=row[1]; smtp_user=decrypt_str(row[2]); smtp_pass=decrypt_str(row[3])
-    from_addr=decrypt_str(row[4]); to_addr=decrypt_str(row[5]); use_ssl=row[6]
+    from_addr=decrypt_str(row[4]); use_ssl=row[6]
+    # to_override (npr. email klijenta pri realizaciji naloga) ima prednost nad
+    # fiksnim SMTP_TO — taj je namenjen internim obaveštenjima (test mail, prijava problema).
+    to_addr = (to_override or decrypt_str(row[5]) or '').strip()
     # Provjeri da su adrese ispravno dekriptovane
     from_addr = (from_addr or smtp_user or '').strip()
-    to_addr   = (to_addr or '').strip()
     if not from_addr or len(from_addr) > 200 or '@' not in from_addr:
         raise HTTPException(500, f"Neispravna From adresa ({len(from_addr)} znakova) - provjerite SMTP podešavanja")
     if not to_addr or len(to_addr) > 500 or '@' not in to_addr:
@@ -777,6 +902,53 @@ def toggle_korisnik(sifra: int, aktivan: int, user=Depends(require_admin)):
         cur=con.cursor(); cur.execute("UPDATE KORISNICI SET AKTIVAN=? WHERE SIFRA=?",[aktivan,sifra]); con.commit()
     return {"status":"updated"}
 
+@app.put("/admin/korisnici/{sifra}", tags=["Admin"])
+def update_korisnik(sifra: int, data: KorisnikUpdate, user=Depends(require_admin)):
+    with get_db_ctx() as con:
+        cur=con.cursor()
+        cur.execute("UPDATE KORISNICI SET NAZIV=?,VRSTA=? WHERE SIFRA=?",[data.naziv,data.vrsta,sifra])
+        if cur.rowcount==0: raise HTTPException(404,"Korisnik nije pronađen")
+        con.commit()
+    return {"status":"updated"}
+
+@app.delete("/admin/korisnici/{sifra}", tags=["Admin"])
+def delete_korisnik(sifra: int, user=Depends(require_admin)):
+    with get_db_ctx() as con:
+        cur=con.cursor()
+        cur.execute("SELECT COUNT(*) FROM KORISNICI")
+        if cur.fetchone()[0]<=1:
+            raise HTTPException(400,"Ne možete obrisati poslednji nalog — mora postojati bar jedan korisnik")
+        cur.execute("DELETE FROM KORISNICI WHERE SIFRA=?",[sifra])
+        if cur.rowcount==0: raise HTTPException(404,"Korisnik nije pronađen")
+        con.commit()
+    return {"status":"deleted"}
+
+@app.get("/podesavanja/email-notif", tags=["Podešavanja"])
+def get_email_notif(user=Depends(require_admin)):
+    with get_db_ctx() as con:
+        cur=con.cursor()
+        cur.execute("SELECT EMAIL_NOTIF_ENABLED,EMAIL_NOTIF_SUBJECT,EMAIL_NOTIF_BODY FROM FIRMA WHERE SIFRA=1")
+        row=cur.fetchone()
+        if not row:
+            return {"enabled":0,"subject":"","body":""}
+        telo=row[2]
+        if telo is not None and hasattr(telo,"read"): telo=telo.read()
+        if isinstance(telo,(bytes,bytearray)): telo=telo.decode("utf-8","ignore")
+        return {
+            "enabled": row[0] or 0,
+            "subject": row[1] or "Vaš uređaj je spreman za preuzimanje",
+            "body": telo or "Poštovani,\n\nVaš uređaj {uredjaj} je završen i spreman za preuzimanje.\n\nBroj naloga: {broj}\n\nSrdačan pozdrav.",
+        }
+
+@app.put("/podesavanja/email-notif", tags=["Podešavanja"])
+def save_email_notif(data: EmailNotifConfig, user=Depends(require_admin)):
+    with get_db_ctx() as con:
+        cur=con.cursor()
+        cur.execute("UPDATE FIRMA SET EMAIL_NOTIF_ENABLED=?,EMAIL_NOTIF_SUBJECT=?,EMAIL_NOTIF_BODY=? WHERE SIFRA=1",
+            [data.enabled,data.subject,data.body])
+        con.commit()
+    return {"status":"saved"}
+
 @app.get("/check-news", include_in_schema=False)
 def check_news():
     """Provjeri novosti sa servera za standalone korisnike."""
@@ -802,7 +974,7 @@ def check_update(user=Depends(require_admin)):
         with urllib.request.urlopen(UPDATE_URL, timeout=8) as r:
             data = json.loads(r.read().decode())
         rv = data.get("version","0.0.0")
-        return {"current":VERSION,"latest":rv,"has_update":tuple(int(x) for x in rv.split(".")) > tuple(int(x) for x in VERSION.split(".")),
+        return {"current":VERSION,"latest":rv,"has_update":rv!=VERSION,
                 "notes":data.get("notes",""),"url":data.get("url","")}
     except Exception as e:
         raise HTTPException(503, f"Ne mogu da proverim: {str(e)}")
@@ -841,10 +1013,6 @@ def do_update(user=Depends(require_admin)):
                     dst = os.path.join(_sdir, "server.py")
                 elif fname == "version.txt":
                     dst = os.path.join(_sdir, "version.txt")
-                elif fname.endswith(".ico"):
-                    dst = os.path.join(_sdir, os.path.basename(fname))
-                elif fname.endswith(".bat") and fname != "start_server.bat":
-                    dst = os.path.join(_sdir, os.path.basename(fname))
                 elif fname == "index.html":
                     dst = os.path.join(STATIC_DIR, "index.html")
                 elif fname == "changelog.html":
@@ -868,14 +1036,6 @@ def do_update(user=Depends(require_admin)):
         import time, subprocess
         time.sleep(3)  # Brzi restart
         if platform.system() == "Windows":
-            # Osvjezi Desktop precicu sa novom ikonicom
-            try:
-                bat_path = os.path.join(_sdir, "update_shortcut.bat")
-                if os.path.exists(bat_path):
-                    subprocess.Popen(["cmd", "/c", bat_path],
-                                   capture_output=True, shell=False)
-            except:
-                pass
             subprocess.Popen(["schtasks", "/end", "/tn", "PortServisniPortal"], 
                            capture_output=True, shell=False)
             time.sleep(2)
@@ -1024,5 +1184,7 @@ if __name__ == "__main__":
     print(f"  HTTP: http://0.0.0.0:8080")
     print("="*55)
     ensure_db()
+    run_migrations()
+    ensure_default_user()
     config=uvicorn.Config(app,host="0.0.0.0",port=8080,reload=False)
     uvicorn.Server(config).run()
