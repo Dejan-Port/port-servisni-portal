@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Changelog — Port Servisni Portal</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',system-ui,sans-serif; background:#0f1117; color:#e8e6f0; min-height:100vh; padding:40px 20px; }
+.wrap { max-width:1100px; margin:0 auto; }
+.back-link { color:#e8673a; text-decoration:none; font-size:13px; display:inline-flex; align-items:center; gap:6px; margin-bottom:32px; }
+.back-link:hover { text-decoration:underline; }
+h1 { font-size:28px; font-weight:700; margin-bottom:6px; }
+.subtitle { color:#7a748a; font-size:14px; margin-bottom:40px; }
+
+.ver-section { margin-bottom:48px; }
+.ver-title { display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid #2a2a3a; }
+.ver-num { font-size:22px; font-weight:700; color:#e8673a; }
+.ver-date { font-size:12px; color:#7a748a; }
+.ver-badge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:100px; letter-spacing:0.5px; }
+.badge-new { background:#1a3a2a; color:#34d399; }
+
+.cols { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:640px) { .cols { grid-template-columns:1fr; } }
+
+.col { background:#151520; border:1px solid #2a2a3a; border-radius:12px; padding:20px; }
+.col-title { font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:#7a748a; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.col-title .dot { width:6px; height:6px; border-radius:50%; background:#e8673a; }
+
+.items { list-style:none; display:flex; flex-direction:column; gap:7px; }
+.items li { font-size:13px; color:#c8c4d8; padding-left:14px; position:relative; line-height:1.5; }
+.items li::before { content:'—'; position:absolute; left:0; color:#e8673a; font-size:11px; top:2px; }
+.items li.only { color:#60a5fa; }
+.items li.only::before { color:#60a5fa; }
+
+.legend { display:flex; gap:16px; margin-bottom:32px; flex-wrap:wrap; }
+.legend-item { display:flex; align-items:center; gap:6px; font-size:12px; color:#7a748a; }
+.legend-dot { width:8px; height:8px; border-radius:50%; }
+.ld-shared { background:#e8673a; }
+.ld-only { background:#60a5fa; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="/" onclick="if(history.length>1){history.back();return false;}" class="back-link">← Nazad na portal</a>
+  <h1>Changelog</h1>
+  <p class="subtitle">Port Servisni Portal — istorija izmena</p>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot ld-shared"></div> Zajedničko za obe verzije</div>
+    <div class="legend-item"><div class="legend-dot ld-only"></div> Specifično za verziju</div>
+  </div>
+
+  <!-- ══ v1.0.5 ══ -->
+  <div class="ver-section">
+    <div class="ver-title">
+      <span class="ver-num">v1.0.5</span>
+      <span class="ver-date">Maj 2026</span>
+      <span class="ver-badge badge-new">NAJNOVIJA</span>
+    </div>
+    <div class="cols">
+      <div class="col">
+        <div class="col-title"><span class="dot"></span>🖥 Server verzija</div>
+        <ul class="items">
+          <li>Viber obaveštenja klijentima pri realizaciji — Viber Desktop automatizacija  (zahteva instalaciju dodatnog programa na računaru gde se nalazi Viber Desktop)</li>
+          <li>Viber podešavanja u Email/SMS tabu (SSH konekcija, sadržaj poruke)</li>
+          <li>Viber checkbox po klijentu — individualno uključivanje</li>
+          <li>Napredna verzija flag po firmi — Email/SMS/Viber notifikacije opciono</li>
+          <li>Viber badge u superadmin listi firmi</li>
+          <li>URL linkovi na radnim nalozima — interni, nevidljivi za klijenta</li>
+          <li>Preuzimanje uređaja — datum preuzimanja i dugme Uređaj preuzet</li>
+          <li>Javna status stranica (status.html) — praćenje naloga po broju i telefonu</li>
+          <li>Infinite scroll za naloge i klijente (100 po stranici)</li>
+          <li>Drugi mobilni telefon po klijentu (TEL_MOBILNI2)</li>
+          <li>Brzi unos klijenta — ime, prezime, email, notif polja</li>
+          <li>SMS link na broj telefona u detalju klijenta (samo za Asterisk VoIP centralu)</li>
+          <li>Novi log statusi: Otpremljen u centralni servis, Vraćen iz centralnog servisa, Donacija</li>
+          <li>Email validacija i lozinka pravila za operatere (min. 6 znakova, 1 veliko, 1 broj)</li>
+          <li>Superadmin: email obavezan za operatere, unique UNAME+EMAIL</li>
+          <li>Radni nalog preimenovan u RADNI NALOG (gornji) i REVERS (donji) na štampi</li>
+          <li>Sortiranje klijenata case-insensitive (po UPPER(NAZIV))</li>
+          <li>Unaprađena pretraga</li>
+          <li class="only">Verzija 1.0.5</li>
+        </ul>
+      </div>
+      <div class="col">
+        <div class="col-title"><span class="dot"></span>💻 Standalone verzija</div>
+        <ul class="items">
+          <li class="only">Nema Viber notifikacija u standalone verziji</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <hr style="border:none;border-top:1px solid #2a2a3a;margin-bottom:48px">
+
+  <!-- ══ v1.0.4 ══ -->
+  <div class="ver-section">
+    <div class="ver-title">
+      <span class="ver-num">v1.0.4</span>
+      <span class="ver-date">Maj 2026</span>
+      </div>
+    <div class="cols">
+      <div class="col">
+        <div class="col-title"><span class="dot"></span>🖥 Server verzija</div>
+        <ul class="items">
+          <li>SMS notifikacije klijentima pri realizaciji — FreePBX/Asterisk AMI</li>
+          <li>Asterisk AMI podešavanja u Email/SMS notifikacije tabu</li>
+          <li>SMS/Email checkbox po klijentu — individualno uključivanje obaveštenja</li>
+          <li>Automatska konverzija srpskih slova za SMS (č→c, ć→c, š→s, ž→z, đ→dj)</li>
+          <li>Test SMS dugme sa poljem za unos broja</li>
+          <li>Automatsko kreiranje baze pri dodavanju nove firme</li>
+          <li>Poboljšano upravljanje operaterima po firmi</li>
+          <li>Popravljeni bugovi: login stranica, promena lozinke, favicon</li>
+          <li class="only">Verzija 1.0.4</li>
+        </ul>
+      </div>
+      <div class="col">
+        <div class="col-title"><span class="dot"></span>💻 Standalone verzija</div>
+        <ul class="items">
+          <li class="only">Nema SMS notifikacija u standalone verziji</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <hr style="border:none;border-top:1px solid #2a2a3a;margin-bottom:48px">
+
+  <!-- ══ v1.0.3 ══ -->
+  <div class="ver-section">
+    <div class="ver-title">
+      <span class="ver-num">v1.0.3</span>
+      <span class="ver-date">Server: Maj 2026 · Standalone: Jul 2026</span>
+
+    </div>
+    <div class="cols">
+      <div class="col">
+        <div class="col-title"><span class="dot"></span>🖥 Server verzija</div>
+        <ul class="items">
+          <li>Email obaveštenja klijentima pri realizaciji naloga</li>
+          <li>Tabela Komunikacija — SMTP podešavanja po firmi u bazi</li>
+          <li>Podešavanja → Email notifikacije (SMTP + sadržaj maila)</li>
+          <li>Test slanje emaila iz podešavanja</li>
+          <li>Automatsko kreiranje Komunikacija tabele za nove firme</li>
+          <li class="only">Verzija 1.0.3</li>
+        </ul>
+      </div>
+      <div class="col">
+        <div class="col-title"><span class="dot"></span>💻 Standalone verzija</div>
+        <ul class="items">
+          <li>Email obaveštenja klijentima pri realizaciji naloga</li>
+          <li>Test slanje emaila iz podešavanja</li>
+          <li>Izmena i brisanje radnog naloga</li>
+          <li class="only">Zasebna SMTP podešavanja samo za obaveštenja klijentima, odvojena od Prijave problema</li>
+          <li class="only">Popravljena Prijava problema — ranije nije stizala zbog pogrešnog servera</li>
+          <li class="only">Changelog dostupan iz aplikacije</li>
+          <li class="only">Verzija 1.0.3</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <hr style="border:none;border-top:1px solid #2a2a3a;margin-bottom:48px">
+
+  <!-- ══ v1.0.2 ══ -->
+  <div class="ver-section">
+    <div class="ver-title">
+      <span class="ver-num">v1.0.2</span>
+      <span class="ver-date">Maj 2026</span>
+    </div>
+    <div class="cols">
+      <div class="col">
+        <div class="col-title"><span class="dot"></span>🖥 Server verzija</div>
+        <ul class="items">
+          <li>Tri teme — tamna, srednja (siva) i svetla</li>
+          <li>Podešavanja prikaza — veličina teksta 100%-140%</li>
+          <li>Tema i veličina se čuvaju lokalno po korisniku</li>
+          <li>Upozorenje pri prijavi ako su korisničko ime i lozinka isti</li>
+          <li>Gornji revers preimenovan u Radni nalog</li>
+          <li>Log popravke premešten na kopiju za servis</li>
+          <li>Izvršeni radovi uklonjeni sa kopije za klijenta</li>
+          <li>Napomena uklonjena sa kopije za servis</li>
+          <li class="only">Verzija 1.0.2 na serveru</li>
+        </ul>
+      </div>
+      <div class="col">
+        <div class="col-title"><span class="dot"></span>💻 Standalone verzija</div>
+        <ul class="items">
+          <li>Tri teme — tamna, srednja (siva) i svetla</li>
+          <li>Podešavanja prikaza — veličina teksta 100%-140%</li>
+          <li>Tema i veličina se čuvaju lokalno po korisniku</li>
+          <li>Scroll u modalima pri povećanom zoomu</li>
+          <li>Gornji revers preimenovan u Radni nalog</li>
+          <li>Log popravke premešten na kopiju za servis</li>
+          <li>Izvršeni radovi uklonjeni sa kopije za klijenta</li>
+          <li>Napomena uklonjena sa kopije za servis</li>
+          <li class="only">Desktop prečica sa ikonicom</li>
+          <li class="only">Ikonica se osvežava automatski pri update-u</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <hr style="border:none;border-top:1px solid #2a2a3a;margin-bottom:48px">
+
+  <!-- ══ v1.0.1 ══ -->
+  <div class="ver-section">
+    <div class="ver-title">
+      <span class="ver-num">v1.0.1</span>
+      <span class="ver-date">Maj 2026</span>
+      </div>
+    <div class="cols">
+      <div class="col">
+        <div class="col-title"><span class="dot"></span>🖥 Server verzija</div>
+        <ul class="items">
+          <li>Reklamacija — vraćanje realizovanog naloga u aktivne</li>
+          <li>Auto-štampa reversa pri realizaciji garancijskog naloga</li>
+          <li>Log popravke na reversu za garancijske naloge</li>
+          <li>Reklamacija oznaka i datum na reversu (za servis)</li>
+          <li>Napomena na reversu iz podešavanja firme</li>
+          <li>Telefon klijenta u kopiji reversa za servis</li>
+          <li>Default filter naloga — Aktivni</li>
+          <li>Forma realizacije zatvara detalj naloga</li>
+          <li class="only">2FA recovery kodovi — PDF export i kopiranje</li>
+          <li class="only">Autofocus i Enter na svim 2FA inputima</li>
+          <li class="only">Superadmin — napomena na reversu po firmi</li>
+        </ul>
+      </div>
+      <div class="col">
+        <div class="col-title"><span class="dot"></span>💻 Standalone verzija</div>
+        <ul class="items">
+          <li>Reklamacija — vraćanje realizovanog naloga u aktivne</li>
+          <li>Auto-štampa reversa pri realizaciji garancijskog naloga</li>
+          <li>Log popravke na reversu za garancijske naloge</li>
+          <li>Reklamacija oznaka i datum na reversu (za servis)</li>
+          <li>Napomena na reversu iz podešavanja firme</li>
+          <li>Telefon klijenta u kopiji reversa za servis</li>
+          <li>Default filter naloga — Aktivni</li>
+          <li>Forma realizacije zatvara detalj naloga</li>
+          <li class="only">Povećan font na reversu za 20%</li>
+          <li class="only">Changelog link u sidebaru</li>
+          <li class="only">Reset localStorage dugme u sidebaru</li>
+          <li class="only">Ažuriran mehanizam update-a (version.txt)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ v1.0.0 ══ -->
+  <div class="ver-section">
+    <div class="ver-title">
+      <span class="ver-num">v1.0.0</span>
+      <span class="ver-date">Maj 2026</span>
+    </div>
+    <div class="cols">
+      <div class="col">
+        <div class="col-title"><span class="dot"></span>🖥 Server verzija</div>
+        <ul class="items">
+          <li>Radni nalozi — kreiranje, praćenje, realizacija</li>
+          <li>Log popravke sa statusima i beleškama</li>
+          <li>Revers štampa — dve kopije na jednoj strani A4</li>
+          <li>Baza klijenata sa istorijom popravki</li>
+          <li>SMTP podrška za obaveštenja</li>
+          <li class="only">Multi-tenant — više firmi na jednoj instalaciji</li>
+          <li class="only">JWT + dvofaktorska autentifikacija (2FA / TOTP)</li>
+          <li class="only">Superadmin panel — upravljanje firmama i operaterima</li>
+          <li class="only">HTTPS, rate limiting, novosti sistem</li>
+        </ul>
+      </div>
+      <div class="col">
+        <div class="col-title"><span class="dot"></span>💻 Standalone verzija</div>
+        <ul class="items">
+          <li>Radni nalozi — kreiranje, praćenje, realizacija</li>
+          <li>Log popravke sa statusima i beleškama</li>
+          <li>Revers štampa — dve kopije na jednoj strani A4</li>
+          <li>Baza klijenata sa istorijom popravki</li>
+          <li>SMTP podrška za obaveštenja</li>
+          <li class="only">Instalacija na Windows 10/11 — auto-start</li>
+          <li class="only">Radi bez stalnog interneta</li>
+          <li class="only">Backup i restore baze podataka</li>
+          <li class="only">Automatski update sa notifikacijom</li>
+          <li class="only">Prijava problema razvojnom timu</li>
+          <li class="only">Open source — MIT licenca</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+<p style="text-align:center;padding:16px 0;font-size:12px;color:#888"><a href="https://www.servisport.rs/politika-privatnosti.html" style="color:#888;text-decoration:none">Politika privatnosti</a></p>
+</body>
+</html>
